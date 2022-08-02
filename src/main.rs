@@ -1,6 +1,5 @@
+use grep_cli::Config;
 use std::env;
-use std::error::Error;
-use std::fs;
 use std::process;
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -11,36 +10,8 @@ fn main() {
     });
     println!("Searching for {}", config.query);
     println!("In file {}", config.filename);
-    if let Err(e) = run(config) {
+    if let Err(e) = grep_cli::run(config) {
         println!("application error {}", e);
         process::exit(1);
     }
-}
-struct Config {
-    query: String,
-    filename: String,
-}
-impl Config {
-    fn new(args: &[String]) -> Result<Config, &'static str> {
-        if args.len() < 3 {
-            return Err("Not enough arguments");
-        }
-        let query = args[1].clone();
-        let filename = args[2].clone();
-        Ok(Config { query, filename })
-    }
-}
-fn run(config: Config) -> Result<(), Box<dyn Error>> {
-    let contents = match fs::read_to_string(&config.filename) {
-        Ok(file) => file,
-        Err(e) => {
-            println!(
-                "could not read file {} , due to error {}",
-                config.filename, e
-            );
-            process::exit(1)
-        }
-    };
-    println!("{}", contents);
-    Ok(())
 }
