@@ -1,18 +1,28 @@
 use std::error::Error;
-use std::fs;
 use std::process;
+use std::{env, fs};
 pub struct Config {
     pub query: String,
     pub filename: String,
+    pub case_sensitive: bool,
 }
 impl Config {
     pub fn new(args: &[String]) -> Result<Config, &'static str> {
         if args.len() < 3 {
             return Err("Not enough arguments");
         }
+
+        let mut case_sensitive = env::var("CASE_INSENSITIVE").is_err();
+        if args.len() == 4 {
+            case_sensitive = parse_case_sensitivity_arg(args[3].clone());
+        }
         let query = args[1].clone();
         let filename = args[2].clone();
-        Ok(Config { query, filename })
+        Ok(Config {
+            query,
+            filename,
+            case_sensitive,
+        })
     }
 }
 pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
@@ -26,11 +36,23 @@ pub fn run(config: Config) -> Result<(), Box<dyn Error>> {
             process::exit(1)
         }
     };
+    let results = if config.case_sensitive {
+        search(&config.query, &contents)
+    } else {
+        search_case_insensitive(&config.query, &contents)
+    };
     println!("{}", contents);
-    for line in search(&config.query, &contents) {
-        println!("The value you search for is \n{}", line);
+    for line in results {
+        println!(" \n{}", line);
     }
     Ok(())
+}
+pub fn parse_case_sensitivity_arg(arg: String) -> bool {
+    if arg.to_lowercase() == "insensitive" {
+        return false;
+    } else {
+        return true;
+    }
 }
 #[cfg(test)]
 mod test {
@@ -77,4 +99,19 @@ pub fn search_case_insensitive<'a>(query: &str, contents: &'a str) -> Vec<&'a st
         }
     }
     results
+}
+#[test]
+fn case_sensitivity_arg() {
+    let case_sensivity_arg = "sensitive".to_string();
+    assert_eq!(true, parse_case_sensitivity_arg(case_sensivity_arg));
+}
+#[test]
+fn case_insensitivity_arg() {
+    let case_sensivity_arg = "insensitive".to_string();
+    assert_eq!(false, parse_case_sensitivity_arg(case_sensivity_arg));
+}
+#[test]
+fn case_insensitivity_arg_invalid() {
+    let case_sensivity_arg = "invalid_arg".to_string();
+    assert_eq!(true, parse_case_sensitivity_arg(case_sensivity_arg));
 }
